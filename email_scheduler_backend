@@ -1,0 +1,97 @@
+import os
+import time
+import imaplib
+import email
+import smtplib
+import dotenv
+from email.mime.text import MIMEText
+from flask import Flask, jsonify
+from threading import Thread
+
+# Load .env credentials
+dotenv.load_dotenv()
+EMAIL = os.getenv("EMAIL")
+PASSWORD = os.getenv("PASSWORD")
+IMAP_SERVER = "outlook.office365.com"
+SMTP_SERVER = "smtp.office365.com"
+
+monitor_data = []
+
+app = Flask(__name__)
+
+
+def summarize_email(body):
+    return body.strip().replace("\n", " ")[:80] + ("..." if len(body) > 80 else "")
+
+
+def monitor_inbox():
+    global monitor_data
+    while True:
+        try:
+            mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+            mail.login(EMAIL, PASSWORD)
+            mail.select("inbox")
+
+            result, data = mail.search(None, "UNSEEN")
+            ids = data[0].split()
+
+            for num in ids:
+                result, msg_data = mail.fetch(num, '(RFC822)')
+                raw_email = msg_data[0][1]
+                msg = email.message_from_bytes(raw_email)
+
+                sender = email.utils.parseaddr(msg['From'])[1]
+                date = msg['Date']
+                body = ""
+                has_attachment = False
+
+                for part in msg.walk():
+                    if part.get_content_maintype() == 'multipart':
+                        continue
+                    if part.get('Content-Disposition'):
+                        has_attachment = True
+                    if part.get_content_type() == 'text/plain':
+                        charset = part.get_content_charset()
+                        body = part.get_payload(decode=True).decode(charset or 'utf-8')
+
+                monitor_data.append({
+                    "recipient": sender,
+                    "attachment": "Yes" if has_attachment else "No",
+                    "date": date.split()[1:4],
+                    "time": date.split()[4],
+                    "summary": summarize_email(body)
+                })
+
+            mail.logout()
+        except Exception as e:
+            print("Monitor error:", e)
+        time.sleep(60)  # refresh every 60s
+
+
+@app.route("/monitor")
+def get_monitor():
+    return jsonify(monitor_data)
+
+
+@app.route("/acknowledge/<recipient>")
+def send_acknowledgment(recipient):
+    try:
+        server = smtplib.SMTP(SMTP_SERVER, 587)
+        server.starttls()
+        server.login(EMAIL, PASSWORD)
+
+        msg = MIMEText("Acknowledged your report. Thank you.")
+        msg['From'] = EMAIL
+        msg['To'] = recipient
+        msg['Subject'] = "Acknowledgment"
+
+        server.sendmail(EMAIL, recipient, msg.as_string())
+        server.quit()
+        return jsonify({"status": "Sent"})
+    except Exception as e:
+        return jsonify({"status": "Failed", "error": str(e)})
+
+
+if __name__ == '__main__':
+    Thread(target=monitor_inbox, daemon=True).start()
+    app.run(debug=True)

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Live Email Monitor</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body {
+      background-color: #eef2f7;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      margin-top: 30px;
+    }
+    table {
+      background-color: white;
+    }
+    .ack-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h3 class="mb-4">Live Email Response Monitor (refresh every minute)</h3>
+
+    <table class="table table-bordered table-striped">
+      <thead class="table-light">
+        <tr>
+          <th>Recipient</th>
+          <th>Attachment</th>
+          <th>Response Date</th>
+          <th>Response Time</th>
+          <th>Message Summary</th>
+          <th>Acknowledge</th>
+        </tr>
+      </thead>
+      <tbody id="monitor-table">
+        <!-- JavaScript will fill this dynamically -->
+        <tr>
+          <td>crew1@vessel.com</td>
+          <td>Yes</td>
+          <td>2025-05-13</td>
+          <td>08:45</td>
+          <td>Received monthly health report. All good.</td>
+          <td class="ack-btn">
+            <input type="checkbox">
+            <button class="btn btn-sm btn-primary">Send</button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Replace this section with real-time data fetching from backend using setInterval
+    setInterval(() => {
+      console.log("Refreshing monitor data...");
+      // Example: fetch('backend/monitor_data.json').then(...);
+    }, 60000); // Refresh every 60 seconds
+  </script>
+</body>
+</html>
